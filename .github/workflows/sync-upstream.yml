@@ -1,0 +1,54 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: '17 8 * * *'  # Daily at 08:17 UTC
+  workflow_dispatch:       # Manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync upstream
+        run: |
+          git remote add upstream https://github.com/garrytan/gstack.git
+          git fetch upstream main
+
+          BEHIND=$(git rev-list --count HEAD..upstream/main)
+          if [ "$BEHIND" -eq 0 ]; then
+            echo "Already up to date with upstream."
+            exit 0
+          fi
+
+          echo "Behind upstream by $BEHIND commits. Merging..."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git merge upstream/main --no-edit; then
+            git push origin main
+            echo "Synced $BEHIND commits from upstream."
+          else
+            echo "Merge conflict detected. Creating PR instead."
+            git merge --abort
+
+            BRANCH="sync-upstream-$(date +%Y%m%d)"
+            git checkout -b "$BRANCH"
+            git merge upstream/main --no-edit || true
+            git add -A
+            git commit -m "chore: sync upstream (conflicts need manual resolution)" --no-verify || true
+            git push -u origin "$BRANCH"
+
+            gh pr create \
+              --title "chore: sync upstream (merge conflicts)" \
+              --body "Automatic upstream sync found merge conflicts. Please resolve manually." \
+              --base main \
+              --head "$BRANCH"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
