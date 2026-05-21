@@ -103,7 +103,7 @@ Write DESIGN.md and CLAUDE.md (or update it) in the working directory.`,
       timeout: 360_000,
       testName: 'design-consultation-core',
       runId,
-      model: 'claude-opus-4-6',
+      model: 'claude-opus-4-7',
     });
 
     logCost('/design-consultation core', result);
@@ -227,7 +227,7 @@ Skip research. Skip font preview. Skip any AskUserQuestion calls — this is non
       timeout: 360_000,
       testName: 'design-consultation-existing',
       runId,
-      model: 'claude-opus-4-6',
+      model: 'claude-opus-4-7',
     });
 
     logCost('/design-consultation existing', result);
@@ -560,7 +560,7 @@ describeIfSelected('Design Review E2E', ['design-review-fix'], () => {
     try { fs.rmSync(qaDesignDir, { recursive: true, force: true }); } catch {}
   });
 
-  test('Test 7: /design-review audits and fixes design issues', async () => {
+  testConcurrentIfSelected('design-review-fix', async () => {
     const serverUrl = `http://localhost:${(qaDesignServer as any)?.port}`;
 
     const result = await runSkillTest({
